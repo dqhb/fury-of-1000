@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>fury of 1000</title>
+    <title>big orange</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Segoe UI', Tahoma, sans-serif; color: white; user-select: none; }
         canvas { display: block; }
@@ -24,9 +24,9 @@
             justify-content: center; align-items: center; pointer-events: auto; z-index: 10;
         }
 
-        #menu h2, #victory h2 { font-size: 4rem; color: #ff8800; margin: 0 0 20px 0; text-shadow: 0 0 20px #ff8800; }
-        #victory h2 { color: #4ade80; text-shadow: 0 0 30px #4ade80; font-size: 3rem; text-align: center; }
-        p { color: #94a3b8; font-size: 1.2rem; margin-bottom: 30px; letter-spacing: 1px; }
+        #menu h2, #victory h2 { font-size: 4rem; color: #ff8800; margin: 0 0 20px 0; text-shadow: 0 0 20px #ff8800; text-align: center; }
+        #victory h2 { color: #4ade80; text-shadow: 0 0 30px #4ade80; font-size: 3rem; }
+        p { color: #94a3b8; font-size: 1.2rem; margin-bottom: 30px; letter-spacing: 1px; text-align: center;}
         .controls-text { color: #fff; font-weight: bold; }
 
         button {
@@ -43,20 +43,23 @@
 
     <div id="ui-layer">
         <div id="top-bar">
-            <h1>orange</h1>
-            <div id="level-display">Level 1 / 1000</div>
+            <h1>big orange</h1>
+            <div id="level-display">JUMPS: 2 &nbsp;|&nbsp; LEVEL 1 / 100</div>
         </div>
     </div>
 
     <div id="menu">
         <h2>THE ORANGE WATCHES</h2>
-        <p><span class="controls-text">A / D</span> Move | <span class="controls-text">W / SPACE</span> Double Jump | Dodge the <span style="color:#ef4444; font-weight:bold;">Red Lasers</span></p>
+        <p>
+            <span class="controls-text">A / D / ARROWS</span> Move | <span class="controls-text">W / SPACE</span> Double Jump<br><br>
+            Dodge the <span style="color:#ff8800; font-weight:bold;">Orange Lasers</span> and falling <span style="color:#ea580c; font-weight:bold;">Asteroids</span>
+        </p>
         <button id="start-btn">BEGIN RUN</button>
     </div>
 
     <div id="victory">
         <h2>THE ORANGE IS DEFEATED!</h2>
-        <p>You survived all 1000 levels.</p>
+        <p>You survived all 100 levels.</p>
         <button onclick="location.reload()">PLAY AGAIN</button>
     </div>
 
@@ -87,33 +90,44 @@
             gameLoop();
         });
 
-        const keys = { a: false, d: false };
-        let jumpPressed = false; // Prevents holding down the key to auto-jump
+        const keys = { left: false, right: false };
+        let jumpPressed = false; 
 
         window.addEventListener('keydown', e => { 
             let key = e.key.toLowerCase();
-            if(keys.hasOwnProperty(key)) keys[key] = true; 
             
-            // Double Jump Logic
-            if((e.code === 'Space' || key === 'w') && !jumpPressed) {
-                jumpPressed = true;
-                if (!player.dead && player.jumpsLeft > 0) {
+            if (key === 'a' || key === 'arrowleft') keys.left = true;
+            if (key === 'd' || key === 'arrowright') keys.right = true;
+            
+            let isJumpKey = (e.code === 'Space' || e.key === ' ' || key === 'w' || key === 'arrowup');
+            
+            if (isJumpKey) {
+                e.preventDefault(); 
+                
+                if (!jumpPressed && !player.dead && player.jumpsLeft > 0) {
                     player.vy = player.jumpPower;
                     player.jumpsLeft--;
-                    player.grounded = false;
+                    jumpPressed = true;
                 }
             }
         });
         
         window.addEventListener('keyup', e => { 
             let key = e.key.toLowerCase();
-            if(keys.hasOwnProperty(key)) keys[key] = false; 
-            if(e.code === 'Space' || key === 'w') jumpPressed = false; 
+            
+            if (key === 'a' || key === 'arrowleft') keys.left = false;
+            if (key === 'd' || key === 'arrowright') keys.right = false;
+            
+            let isJumpKey = (e.code === 'Space' || e.key === ' ' || key === 'w' || key === 'arrowup');
+            if (isJumpKey) {
+                jumpPressed = false; 
+            }
         });
 
         let currentLevel = 1;
         let platforms = [];
         let lasers = [];
+        let asteroids = [];
         let particles = [];
         let bgOranges = [];
         let cameraX = 0;
@@ -124,8 +138,7 @@
             x: 0, y: 0, w: 24, h: 24,
             vx: 0, vy: 0,
             speed: 0.9, maxSpeed: 7, friction: 0.85,
-            jumpPower: -12.5, gravity: 0.65, // Slightly lower jump power since we have two
-            grounded: false, 
+            jumpPower: -12.5, gravity: 0.65, 
             jumpsLeft: 2, maxJumps: 2,
             color: '#38bdf8', dead: false
         };
@@ -133,15 +146,16 @@
         function buildLevel(level) {
             platforms = [];
             lasers = [];
+            asteroids = [];
             particles = [];
             bgOranges = [];
             
             let curX = 100;
             let curY = 0;
-            let minX = 0;
-            let maxX = 200;
-            let minY = 0;
-            let maxY = 0;
+            let minX = -500;
+            let maxX = 500;
+            let minY = -500;
+            let maxY = 500;
             
             // Start platform
             platforms.push({ x: curX, y: curY + 100, w: 200, h: 20, type: 'start', color: '#facc15' });
@@ -152,61 +166,78 @@
             player.vy = 0;
             player.dead = false;
             player.jumpsLeft = player.maxJumps;
+            jumpPressed = false; 
 
-            // Room scaling
-            let numJumps = 20 + Math.floor(level * 0.05);
+            // Calculate room size based on level
+            let numJumps = 15 + Math.floor(level * 0.3);
+            let diff = Math.min(level / 100, 1);
             let lowestY = curY + 100;
-            let diff = Math.min(level / 800, 1);
 
             for (let i = 0; i < numJumps; i++) {
+                // 4 completely different jump generation modes
                 let jumpPattern = Math.floor(Math.random() * 4);
                 let gapX, gapY, platW;
 
                 if (jumpPattern === 0) {
-                    gapX = 90 + Math.random() * 50;
-                    gapY = -80 - Math.random() * 60;
-                    platW = 100 - (diff * 40);
+                    // Straight / Steep UP
+                    gapX = (Math.random() * 100) - 50; // Wiggle slightly left/right
+                    gapY = -120 - Math.random() * 80;
+                    platW = 70 + Math.random() * 50;
                 } else if (jumpPattern === 1) {
-                    gapX = 120 + Math.random() * 80;
-                    gapY = 100 + Math.random() * 90;
-                    platW = 100 - (diff * 40);
+                    // Staircase UP (Left or Right)
+                    let dir = Math.random() < 0.5 ? 1 : -1;
+                    gapX = dir * (80 + Math.random() * 60);
+                    gapY = -80 - Math.random() * 60;
+                    platW = 80 + Math.random() * 40;
                 } else if (jumpPattern === 2) {
-                    gapX = 180 + (diff * 60); // Wider gaps because double jump
-                    gapY = (Math.random() * 50) - 25;
-                    platW = 120 - (diff * 50);
+                    // Long Horizontal Jump (Left or Right)
+                    let dir = Math.random() < 0.5 ? 1 : -1;
+                    gapX = dir * (160 + (diff * 50));
+                    gapY = (Math.random() * 60) - 30;
+                    platW = 90 + Math.random() * 40;
                 } else {
-                    gapX = 80 + Math.random() * 40;
-                    gapY = (Math.random() * 100) - 50;
-                    platW = Math.max(20, 60 - (diff * 30));
+                    // Drop DOWN
+                    let dir = Math.random() < 0.5 ? 1 : -1;
+                    gapX = dir * (50 + Math.random() * 100);
+                    gapY = 100 + Math.random() * 100;
+                    platW = 70 + Math.random() * 50;
                 }
 
                 curX += gapX;
                 curY += gapY;
                 
+                // Track bounds for background oranges and death barrier
                 if (curY > lowestY) lowestY = curY;
                 if (curY < minY) minY = curY;
+                if (curY > maxY) maxY = curY;
+                if (curX < minX) minX = curX;
                 if (curX > maxX) maxX = curX;
 
-                platforms.push({ x: curX, y: curY, w: Math.max(20, platW), h: 20, type: 'normal', color: '#cbd5e1' });
-                curX += Math.max(20, platW);
+                // Pick a random orange shade for the platform
+                let orangeShades = ['#ea580c', '#f97316', '#fdba74', '#c2410c'];
+                let pColor = orangeShades[Math.floor(Math.random() * orangeShades.length)];
+
+                platforms.push({ x: curX, y: curY, w: Math.max(20, platW), h: 20, type: 'normal', color: pColor });
             }
             
-            platforms.push({ x: curX + 150, y: curY, w: 200, h: 20, type: 'goal', color: '#4ade80' });
-            maxX = curX + 350;
-            maxY = lowestY;
+            // Goal platform (always slightly above the last platform so you don't miss it)
+            platforms.push({ x: curX + (Math.random() < 0.5 ? 150 : -150), y: curY - 50, w: 200, h: 20, type: 'goal', color: '#4ade80' });
             
-            // Generate Parallax Background Oranges based on room size
-            for(let i = 0; i < 40; i++) {
+            // Expand background bounds to cover the weird geometry
+            minX -= 500; maxX += 500;
+            minY -= 800; maxY += 800;
+
+            for(let i = 0; i < 60; i++) {
                 bgOranges.push({
-                    x: minX + Math.random() * (maxX - minX) * 1.5 - (maxX - minX) * 0.25,
-                    y: minY + Math.random() * (maxY - minY + 1000) - 500,
+                    x: minX + Math.random() * (maxX - minX),
+                    y: minY + Math.random() * (maxY - minY),
                     r: Math.random() * 150 + 50,
-                    parallax: Math.random() * 0.4 + 0.1 // 0.1 is far away, 0.5 is closer
+                    parallax: Math.random() * 0.4 + 0.1 
                 });
             }
 
-            deathY = lowestY + 600; 
-            levelUI.innerText = `Level ${level} / 1000`;
+            // Death barrier adapts to how far down the level generated
+            deathY = lowestY + 800; 
         }
 
         function isColliding(rect1, rect2) {
@@ -234,28 +265,27 @@
             player.dead = true;
             createSplash(player.x + player.w / 2, player.y + player.h / 2);
             
-            // Wait 1 second before restarting so the player can see the juice splash
             setTimeout(() => {
                 buildLevel(currentLevel);
             }, 1000);
         }
 
         function updatePhysics() {
-            // Update Particles
+            // Update Splashes
             for(let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 p.x += p.vx;
                 p.y += p.vy;
-                p.vy += 0.5; // Gravity on juice
+                p.vy += 0.5; 
                 p.life -= p.decay;
                 if(p.life <= 0) particles.splice(i, 1);
             }
 
-            if (player.dead) return; // Stop player movement while dead
+            if (player.dead) return; 
 
             // Horizontal Movement
-            if (keys.a) player.vx -= player.speed;
-            if (keys.d) player.vx += player.speed;
+            if (keys.left) player.vx -= player.speed;
+            if (keys.right) player.vx += player.speed;
             player.vx *= player.friction;
             
             player.vx = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.vx));
@@ -273,7 +303,6 @@
             // Vertical Movement
             player.vy += player.gravity;
             player.y += player.vy;
-            player.grounded = false;
 
             // Vertical Collisions
             for (let p of platforms) {
@@ -281,12 +310,11 @@
                     if (player.vy > 0) { // Landing
                         player.y = p.y - player.h;
                         player.vy = 0;
-                        player.grounded = true;
-                        player.jumpsLeft = player.maxJumps; // Reset double jumps
+                        player.jumpsLeft = player.maxJumps; 
                         
                         if (p.type === 'goal') {
                             currentLevel++;
-                            if (currentLevel > 1000) {
+                            if (currentLevel > 100) {
                                 isPlaying = false;
                                 victoryScreen.style.display = 'flex';
                             } else {
@@ -294,36 +322,35 @@
                             }
                             return; 
                         }
-                    } else if (player.vy < 0) { // Hitting head
+                    } else if (player.vy < 0) { // Hitting head on ceiling
                         player.y = p.y + p.h;
                         player.vy = 0;
                     }
                 }
             }
 
-            // Fall off the absolute bottom
             if (player.y > deathY) {
                 die();
             }
         }
 
-        function updateBossAttacks() {
-            if (player.dead) return; // Boss stops attacking if you're dead
+        function updateHazards() {
+            if (player.dead) return; 
 
-            let baseRate = 0.005;
-            let levelRate = currentLevel * 0.0001;
-            let spawnChance = Math.min(baseRate + levelRate, 0.12);
+            // --- LASERS ---
+            let laserChance = Math.min(0.005 + currentLevel * 0.0005, 0.15);
+            if (currentLevel === 100) laserChance = 0.25; 
 
-            if (currentLevel === 1000) spawnChance = 0.2; 
-
-            if (Math.random() < spawnChance) {
-                let targetWorldX = player.x + (Math.random() * 600 - 300);
+            if (Math.random() < laserChance) {
+                let isHoriz = Math.random() > 0.5;
                 lasers.push({
-                    worldX: targetWorldX,
-                    w: 40 + Math.random() * 50,
+                    worldX: isHoriz ? 0 : player.x + (Math.random() * 800 - 400),
+                    worldY: isHoriz ? player.y + (Math.random() * 600 - 300) : 0,
+                    w: 30 + Math.random() * 60,
                     timer: 60, 
                     activeTimer: 15, 
-                    state: 'warning'
+                    state: 'warning',
+                    isHorizontal: isHoriz
                 });
             }
 
@@ -339,9 +366,55 @@
                         continue;
                     }
                     
-                    if (player.x < l.worldX + l.w && player.x + player.w > l.worldX) {
-                        die(); 
+                    // Laser Collision Check
+                    if (l.isHorizontal) {
+                        if (player.y < l.worldY + l.w && player.y + player.h > l.worldY) die();
+                    } else {
+                        if (player.x < l.worldX + l.w && player.x + player.w > l.worldX) die();
                     }
+                }
+            }
+
+            // --- ASTEROIDS ---
+            let asteroidChance = Math.min(0.01 + currentLevel * 0.001, 0.1);
+            if (Math.random() < asteroidChance) {
+                asteroids.push({
+                    x: player.x + (Math.random() * 1200 - 600),
+                    y: player.y - 800, // Spawn high above
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: 7 + Math.random() * 6,
+                    r: 12 + Math.random() * 18,
+                    rot: 0,
+                    rotSpeed: (Math.random() - 0.5) * 0.2
+                });
+            }
+
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                let a = asteroids[i];
+                a.x += a.vx;
+                a.y += a.vy;
+                a.rot += a.rotSpeed;
+
+                // Hit Player
+                let dx = (player.x + player.w / 2) - a.x;
+                let dy = (player.y + player.h / 2) - a.y;
+                if (Math.hypot(dx, dy) < a.r + (player.w / 2)) {
+                    die();
+                }
+
+                // Hit Platform (Destroys the asteroid and makes a splash)
+                let hitPlatform = false;
+                for (let p of platforms) {
+                    if (a.x + a.r > p.x && a.x - a.r < p.x + p.w &&
+                        a.y + a.r > p.y && a.y - a.r < p.y + p.h) {
+                        hitPlatform = true;
+                        break;
+                    }
+                }
+
+                if (hitPlatform || a.y > deathY) {
+                    createSplash(a.x, a.y + a.r); // Splash at bottom of asteroid
+                    asteroids.splice(i, 1);
                 }
             }
         }
@@ -356,17 +429,18 @@
             cameraX += (targetCameraX - cameraX) * 0.1;
             cameraY += (targetCameraY - cameraY) * 0.1;
 
-            // --- BACKGROUND LAYER ---
+            levelUI.innerHTML = `JUMPS: <span style="color: ${player.jumpsLeft > 0 ? '#4ade80' : '#ef4444'}">${player.jumpsLeft}</span> &nbsp;|&nbsp; LEVEL ${currentLevel} / 100`;
+
+            // Draw Parallax Oranges
             for (let o of bgOranges) {
-                ctx.fillStyle = 'rgba(255, 136, 0, 0.05)'; // Very faint orange
+                ctx.fillStyle = 'rgba(255, 136, 0, 0.05)';
                 ctx.beginPath();
-                // Apply parallax math: multiply camera position by the parallax factor
                 ctx.arc(o.x - (cameraX * o.parallax), o.y - (cameraY * o.parallax), o.r, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            // --- UI/BOSS LAYER ---
-            ctx.fillStyle = '#ff8800';
+            // Draw Boss (Matches the Orange Theme now)
+            ctx.fillStyle = '#ea580c';
             ctx.beginPath();
             ctx.arc(canvas.width / 2, 0, 150, 0, Math.PI * 2);
             ctx.fill();
@@ -378,31 +452,68 @@
             ctx.arc(canvas.width / 2 + 40 + eyeOffsetX, 60, 15, 0, Math.PI * 2);
             ctx.fill();
 
-            for (let l of lasers) {
-                let screenX = l.worldX - cameraX;
-                if (l.state === 'warning') {
-                    ctx.fillStyle = 'rgba(239, 68, 68, 0.15)'; 
-                    ctx.fillRect(screenX, 0, l.w, canvas.height);
-                    ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(screenX, 0, l.w, canvas.height);
-                } else if (l.state === 'active') {
-                    ctx.fillStyle = '#ef4444'; 
-                    ctx.shadowBlur = 20;
-                    ctx.shadowColor = '#ef4444';
-                    ctx.fillRect(screenX, 0, l.w, canvas.height);
-                    ctx.shadowBlur = 0; 
-                }
-            }
-
-            // --- WORLD LAYER ---
+            // Draw Platforms
             for (let p of platforms) {
                 ctx.fillStyle = p.color;
                 ctx.fillRect(p.x - cameraX, p.y - cameraY, p.w, p.h);
             }
 
-            // Draw Juice Splash Particles
-            ctx.fillStyle = '#f97316'; // Vivid Orange
+            // Draw Asteroids
+            for (let a of asteroids) {
+                ctx.save();
+                ctx.translate(a.x - cameraX, a.y - cameraY);
+                ctx.rotate(a.rot);
+                ctx.fillStyle = '#c2410c'; // Dark rugged orange
+                ctx.beginPath();
+                ctx.arc(0, 0, a.r, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Little crater details on the asteroid
+                ctx.fillStyle = '#9a3412';
+                ctx.beginPath();
+                ctx.arc(-a.r*0.3, -a.r*0.3, a.r*0.2, 0, Math.PI * 2);
+                ctx.arc(a.r*0.4, a.r*0.1, a.r*0.25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Draw Lasers (Now Orange & Omni-directional)
+            for (let l of lasers) {
+                if (l.isHorizontal) {
+                    let screenY = l.worldY - cameraY;
+                    if (l.state === 'warning') {
+                        ctx.fillStyle = 'rgba(251, 146, 60, 0.15)'; 
+                        ctx.fillRect(0, screenY, canvas.width, l.w);
+                        ctx.strokeStyle = 'rgba(251, 146, 60, 0.6)';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(0, screenY, canvas.width, l.w);
+                    } else if (l.state === 'active') {
+                        ctx.fillStyle = '#ff8800'; 
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = '#ff8800';
+                        ctx.fillRect(0, screenY, canvas.width, l.w);
+                        ctx.shadowBlur = 0; 
+                    }
+                } else {
+                    let screenX = l.worldX - cameraX;
+                    if (l.state === 'warning') {
+                        ctx.fillStyle = 'rgba(251, 146, 60, 0.15)'; 
+                        ctx.fillRect(screenX, 0, l.w, canvas.height);
+                        ctx.strokeStyle = 'rgba(251, 146, 60, 0.6)';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(screenX, 0, l.w, canvas.height);
+                    } else if (l.state === 'active') {
+                        ctx.fillStyle = '#ff8800'; 
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = '#ff8800';
+                        ctx.fillRect(screenX, 0, l.w, canvas.height);
+                        ctx.shadowBlur = 0; 
+                    }
+                }
+            }
+
+            // Draw Particles
+            ctx.fillStyle = '#f97316'; 
             for(let p of particles) {
                 ctx.globalAlpha = p.life;
                 ctx.beginPath();
@@ -411,7 +522,7 @@
             }
             ctx.globalAlpha = 1.0;
 
-            // Draw Player (Only if alive)
+            // Draw Player
             if (!player.dead) {
                 ctx.fillStyle = player.color;
                 ctx.shadowBlur = 15;
@@ -419,10 +530,12 @@
                 ctx.fillRect(player.x - cameraX, player.y - cameraY, player.w, player.h);
                 ctx.shadowBlur = 0;
                 
-                // Visual indicator for double jump (inner glow)
                 if (player.jumpsLeft === 2) {
-                    ctx.fillStyle = '#bae6fd';
+                    ctx.fillStyle = '#bae6fd'; 
                     ctx.fillRect(player.x - cameraX + 6, player.y - cameraY + 6, player.w - 12, player.h - 12);
+                } else if (player.jumpsLeft === 1) {
+                    ctx.fillStyle = '#fde047'; 
+                    ctx.fillRect(player.x - cameraX + 8, player.y - cameraY + 8, player.w - 16, player.h - 16);
                 }
             }
         }
@@ -430,7 +543,7 @@
         function gameLoop() {
             if (!isPlaying) return;
             updatePhysics();
-            updateBossAttacks();
+            updateHazards();
             draw();
             animationId = requestAnimationFrame(gameLoop);
         }
