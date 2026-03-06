@@ -72,7 +72,7 @@
             if (k===' ' || e.code==='Space') keys.space = false;
         });
 
-        const player = { x: 200, y: 200, r: 12, vx: 0, vy: 0, speed: 0.8, friction: 0.92, gravity: 0.4, thrust: -0.9, dashCooldown: 0, color: '#f97316', pulseTimer: 0 };
+        const player = { x: 200, y: 200, r: 15, vx: 0, vy: 0, speed: 0.8, friction: 0.92, gravity: 0.4, thrust: -0.9, dashCooldown: 0, color: '#f97316', pulseTimer: 0 }; // Slightly increased player radius to fit the face better
         const boss = { x: 0, y: 0, r: 60, color: '#ea580c', pulseTimer: 0 }; 
         
         let projs = []; 
@@ -130,7 +130,7 @@
 
                 switch(type) {
                     case 1: 
-                        spawnZone('spinLasers', { angle: Math.random()*Math.PI, speed: 0.008, life: 300 }); break; // Slowed down
+                        spawnZone('spinLasers', { angle: Math.random()*Math.PI, speed: 0.008, life: 300 }); break;
                     case 2: 
                         for(let i=0; i<8; i++) {
                             let edgeX = Math.random() < 0.5 ? 0 : canvas.width;
@@ -283,7 +283,7 @@
                         if (p.dist > canvas.width) projs.splice(i, 1);
                     } else if (p.type === 'bouncy') {
                         p.x += p.vx; p.y += p.vy;
-                        p.angle += p.spinSpeed; // Spin the bouncy face
+                        p.angle += p.spinSpeed; 
                         if (p.x < 0 || p.x > canvas.width) { p.vx *= -1; p.bounces--; }
                         if (p.y < 0 || p.y > canvas.height) { p.vy *= -1; p.bounces--; }
                         if (p.bounces <= 0) projs.splice(i, 1);
@@ -343,8 +343,13 @@
                         }
                     } else if (z.type === 'sniper') {
                         if (z.timer <= 0) {
-                            let a = Math.atan2(z.ty - boss.y, z.tx - boss.x);
-                            spawnProj(boss.x, boss.y, Math.cos(a)*30, Math.sin(a)*30, 10);
+                            let baseA = Math.atan2(z.ty - boss.y, z.tx - boss.x);
+                            // Fire 20 bullets in a deadly shotgun spread
+                            for(let j = 0; j < 20; j++) {
+                                let spread = baseA + (Math.random() - 0.5) * 0.8; 
+                                let spd = 12 + Math.random() * 15; 
+                                spawnProj(boss.x, boss.y, Math.cos(spread)*spd, Math.sin(spread)*spd, 6);
+                            }
                             zones.splice(i, 1);
                         }
                     } else if (z.type === 'cross') {
@@ -370,7 +375,7 @@
                         }
                     } else if (z.type === 'blender') {
                         z.life--; 
-                        let currentBlenderAngle = z.angle + (frame * 0.02); // Slowed down
+                        let currentBlenderAngle = z.angle + (frame * 0.02);
                         if(z.life <= 0) zones.splice(i, 1);
                         if (z.timer <= 0) {
                             let p1x = boss.x + Math.cos(currentBlenderAngle)*2000; let p1y = boss.y + Math.sin(currentBlenderAngle)*2000;
@@ -396,7 +401,6 @@
             frame++;
         }
 
-        // Shared face drawing logic for boss and bouncers
         function drawFace(x, y, r, phase) {
             ctx.fillStyle = '#0f172a';
             ctx.strokeStyle = '#0f172a';
@@ -406,7 +410,7 @@
             let eyeY = -r * 0.25;
             let eyeR = r * 0.15;
 
-            if (phase === 0) { // Normal
+            if (phase === 0) { // Normal / Happy
                 ctx.beginPath(); ctx.arc(x - eyeX, y + eyeY, eyeR, 0, Math.PI*2); ctx.fill();
                 ctx.beginPath(); ctx.arc(x + eyeX, y + eyeY, eyeR, 0, Math.PI*2); ctx.fill();
                 ctx.beginPath(); ctx.arc(x, y + r*0.15, r*0.4, 0, Math.PI, false); ctx.stroke();
@@ -534,7 +538,6 @@
                 let phase = Math.min(4, Math.floor(score / 20));
                 let bRadius = boss.r + (boss.pulseTimer > 0 ? Math.sin(boss.pulseTimer * 0.5) * 5 : 0);
                 
-                // Darken orange as boss enrages
                 let bColor = boss.color;
                 if(phase === 2) bColor = '#d9460b';
                 if(phase >= 3) bColor = '#c2410c';
@@ -550,11 +553,10 @@
             ctx.fillStyle = '#facc15';
             for (let p of projs) {
                 if (p.type === 'bouncy') {
-                    // Draw spinning face for bouncy
                     ctx.save();
                     ctx.translate(p.x, p.y);
                     ctx.rotate(p.angle);
-                    ctx.fillStyle = '#ea580c'; // Make them orange
+                    ctx.fillStyle = '#ea580c'; 
                     ctx.beginPath(); ctx.arc(0, 0, p.r, 0, Math.PI*2); ctx.fill();
                     drawFace(0, 0, p.r, phase);
                     ctx.restore();
@@ -571,6 +573,9 @@
                 let pRadius = player.r + (player.pulseTimer > 0 ? Math.sin(player.pulseTimer * 0.5) * 3 : 0);
                 ctx.fillStyle = player.color;
                 ctx.beginPath(); ctx.arc(player.x, player.y, pRadius, 0, Math.PI*2); ctx.fill();
+                
+                // Drawing the happy face on the player!
+                drawFace(player.x, player.y, player.r, 0); 
             }
         }
 
