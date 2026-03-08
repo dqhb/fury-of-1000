@@ -230,6 +230,87 @@
                             spawnProj(cx, cy, Math.cos(ang)*spd, Math.sin(ang)*spd, 12, 'puddle_proj', { life: dist / spd });
                         }
                         break;
+                        case 26: // radial burst
+    for(let i=0;i<40;i++){
+        let a=(i/40)*Math.PI*2;
+        spawnProj(cx,cy,Math.cos(a)*7,Math.sin(a)*7,7);
+    }
+break;
+
+case 27: // double spiral
+    spawnZone('spiral',{angle:0,life:200});
+    spawnZone('spiral',{angle:Math.PI,life:200});
+break;
+
+case 28: // homing swarm
+    for(let i=0;i<10 + scale;i++){
+        spawnProj(Math.random()*canvas.width,-40,(Math.random()-0.5)*3,5,9,'homing',{life:240});
+    }
+break;
+
+case 29: // expanding orbit ring
+    for(let i=0;i<20;i++){
+        spawnProj(cx,cy,0,0,10,'orbit',{
+            angle:(i/20)*Math.PI*2,
+            dist:40,
+            speed:0.03,
+            expand:4
+        });
+    }
+break;
+
+case 30: // wall collapse
+    spawnZone('hvLaser',{isH:true,y:canvas.height*0.25,h:80});
+    spawnZone('hvLaser',{isH:true,y:canvas.height*0.75,h:80});
+    spawnZone('hvLaser',{isH:false,x:canvas.width*0.25,w:80});
+    spawnZone('hvLaser',{isH:false,x:canvas.width*0.75,w:80});
+break;
+
+case 31: // meteor rain
+    for(let i=0;i<25 + scale;i++){
+        spawnProj(Math.random()*canvas.width,-50,(Math.random()-0.5)*2,10+Math.random()*3,10,'asteroid');
+    }
+break;
+
+case 32: // rotating sniper burst
+    for(let i=0;i<8;i++){
+        let a=(i/8)*Math.PI*2;
+        spawnZone('sniper',{
+            tx: boss.x + Math.cos(a)*500,
+            ty: boss.y + Math.sin(a)*500
+        });
+    }
+break;
+
+case 33: // minefield
+    for(let i=0;i<12 + scale;i++){
+        spawnZone('mine',{
+            x:Math.random()*canvas.width,
+            y:Math.random()*canvas.height,
+            r:60
+        });
+    }
+break;
+
+case 34: // bouncing chaos
+    for(let i=0;i<12;i++){
+        spawnProj(cx,cy,(Math.random()-0.5)*14,(Math.random()-0.5)*14,14,'bouncy',{
+            bounces:6,
+            angle:0,
+            spinSpeed:(Math.random()-0.5)*0.3
+        });
+    }
+break;
+
+case 35: // blackhole cluster
+    for(let i=0;i<3;i++){
+        spawnZone('blackhole',{
+            x:Math.random()*canvas.width,
+            y:Math.random()*canvas.height,
+            life:220
+        });
+    }
+break;
                 }
             }
         }
